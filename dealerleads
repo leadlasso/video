@@ -174,8 +174,8 @@
     <div class="header">
       <div class="brand">
         <button id="logoToggle" class="logo-btn" type="button" aria-label="Toggle theme via logo" title="Toggle theme">
-          <img class="logo logo-dark" src="https://theleadlasso.com/agency/white_leadlasso.png" alt="LeadLasso logo (dark theme)" />
-          <img class="logo logo-light" src="https://theleadlasso.com/agency/darkleadlasso.png" alt="LeadLasso logo (light theme)" />
+          <img class="logo logo-dark" src="https://theleadlasso.com/assets/whitedealerleads.png"" alt="DealerLeads logo (dark theme)" />
+          <img class="logo logo-light" src="https://theleadlasso.com/assets/DealerLeadsColor.png" alt="DealerLeads logo (light theme)" />
         </button>
         <div><div class="sub">Available Product Options + Solutions </div></div>
       </div>
@@ -217,7 +217,7 @@
     </div>
 
     <div class="grid" id="grid" aria-live="polite"></div>
-    <p class="footer-note">LeadLasso. All rights reserved.</p>
+    <p class="footer-note">DealerLeads. All rights reserved.</p>
   </div>
 
   <!-- Toast -->
