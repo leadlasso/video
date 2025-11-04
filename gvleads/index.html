@@ -1,1 +1,599 @@
 
+<!DOCTYPE html> 
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Video Library</title>
+<style>
+  /* ===== THEME TOKENS (DARK DEFAULT) ===== */
+  :root{
+    --bg:#0f1115;
+    --bg-grad1:#0e1014;
+    --bg-grad2:#0b0d11;
+    --card:#171a21;
+    --ink:#e9edf1;
+    --muted:#9aa4b2;
+    --line:#232834;
+    --chip:#222735;
+    --chip-ink:#c5cfdb;
+    --focus:#3a4770;
+    --surface:rgba(15,17,21,.75);
+  }
+  /* ===== LIGHT THEME OVERRIDES ===== */
+  html[data-theme="light"]{
+    --bg:#f6f7f9;
+    --bg-grad1:#ffffff;
+    --bg-grad2:#f6f7f9;
+    --card:#ffffff;
+    --ink:#111418;
+    --muted:#5b6573;
+    --line:#e6e8ee;
+    --chip:#eef1f6;
+    --chip-ink:#253047;
+    --focus:#b7c4e6;
+    --surface:rgba(255,255,255,.8);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:linear-gradient(180deg,var(--bg-grad1) 0%,var(--bg-grad2) 100%);
+    color:var(--ink);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    transition: background .25s ease, color .25s ease;
+  }
+  .container{max-width:1800px; margin:0 auto; padding:24px;}
+  .header{margin-bottom:16px;}
+  .title{font-size:clamp(20px,2vw + 10px,32px); font-weight:800; letter-spacing:.2px}
+  .sub{color:var(--muted); margin-top:4px; font-size:14px}
+
+  .brand{display:flex; align-items:center; gap:14px}
+  .logo-btn{border:none; background:transparent; padding:0; margin:0; cursor:pointer; line-height:0; display:inline-flex; align-items:center;}
+  .logo{height:clamp(28px, 2.6vw, 44px); width:auto; display:none;}
+  html[data-theme="dark"] .logo-dark{display:inline-block;}
+  html[data-theme="light"] .logo-light{display:inline-block;}
+
+  /* ===== Sticky controls bar ===== */
+  .controls-wrap{
+    position:sticky; top:0; z-index:50; margin:-8px -24px 18px; padding:8px 24px;
+    backdrop-filter: saturate(1.2) blur(8px);
+    background:var(--surface);
+    border-bottom:1px solid var(--line);
+  }
+  @media (max-width:640px){ .controls-wrap{ margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px; } }
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .left-controls, .right-controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .left-controls{min-width:0; flex:1}
+
+  .search{
+    appearance:none; border:1px solid var(--line); background:transparent; color:var(--ink);
+    padding:10px 14px; border-radius:10px; min-width:240px; outline:none; flex:0 1 320px;
+  }
+  html[data-theme="light"] .search{ background:#fff; }
+
+  /* ===== Chips row ===== */
+  .chips-row{
+    display:flex; gap:12px; align-items:center; overflow-x:auto;
+    padding:10px 12px 14px 12px;
+    -webkit-overflow-scrolling:touch; scrollbar-width:thin;
+  }
+  .chips-row::-webkit-scrollbar{height:8px}
+  .chips-row::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px}
+
+  .chip{
+    background:var(--chip); color:var(--chip-ink); border:1px solid #2a3141;
+    padding:10px 14px; border-radius:999px; font-weight:600; font-size:13px; cursor:pointer;
+    user-select:none; white-space:nowrap; flex:0 0 auto;
+    transition: box-shadow .15s ease, border-color .15s ease, background .15s ease, transform .15s ease;
+  }
+  .chip[aria-pressed="true"]{ border-color:var(--focus); box-shadow:0 0 0 3px rgba(58,71,112,.45); outline:none; }
+  .chip:focus-visible{ border-color:var(--focus); box-shadow:0 0 0 3px rgba(58,71,112,.45); outline:none; }
+  html[data-theme="light"] .chip{ border-color:#d6dbe6; }
+
+  /* Red NEW chip styling (no animation) */
+  .chip-new{
+    background:linear-gradient(180deg,#e11d48 0%, #b91c1c 100%);
+    color:#fff; border-color:#b91c1c;
+  }
+  .chip-new .chip-star{ display:inline-block; margin-right:6px; font-size:12px; line-height:1; position:relative; top:-1px; }
+  html[data-theme="light"] .chip-new{ box-shadow:0 1px 0 rgba(0,0,0,.05); }
+
+  /* Buttons */
+  .theme-btn, .mode-btn, .share-btn, .reset-btn{
+    appearance:none; border:1px solid var(--line); background:transparent; color:var(--ink);
+    padding:9px 12px; border-radius:999px; font-weight:700; font-size:13px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
+  }
+  .theme-btn .icon{ font-size:16px; line-height:1 }
+  .mode-btn[aria-pressed="true"]{ outline:2px solid var(--focus); border-color:var(--focus); }
+  .theme-btn:focus-visible, .mode-btn:focus-visible, .share-btn:focus-visible, .reset-btn:focus-visible, .search:focus, .logo-btn:focus-visible{
+    box-shadow:0 0 0 3px rgba(30,29,87,.35); border-color:var(--focus); outline:none;
+  }
+
+  /* Grid: 1 col mobile, 2 cols desktop */
+  .grid{display:grid; gap:20px; grid-template-columns:1fr}
+  @media (min-width:900px){ .grid{ grid-template-columns:1fr 1fr; } }
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    box-shadow:0 6px 24px rgba(0,0,0,.20); display:flex; flex-direction:column;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .2s ease;
+  }
+  .card:hover{ transform:translateY(-2px); border-color:#2c3446; box-shadow:0 10px 36px rgba(0,0,0,.25); }
+  html[data-theme="light"] .card:hover{ border-color:#cfd5e2; }
+
+  .thumb{ position:relative; aspect-ratio:16/9; background:#0a0d12; border-bottom:1px solid var(--line); }
+  html[data-theme="light"] .thumb{ background:#f2f4f7; }
+  .thumb iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+  .content{ padding:16px 16px 8px 16px; }
+  .name{ font-weight:800; font-size:20px; line-height:1.3; margin:0 0 6px 0; display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+  .meta{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px 0; }
+  .pill{ background:#0f141d; border:1px solid #273045; color:#cbd6e2; padding:5px 8px; border-radius:8px; font-size:12px; font-weight:600; }
+  html[data-theme="light"] .pill{ background:#f1f4fa; border-color:#d6dbe6; color:#273045; }
+
+  .lists{ display:grid; grid-template-columns:1fr; gap:12px; padding:0 16px 16px 16px; }
+  @media (min-width:600px){ .lists{ grid-template-columns:1fr 1fr; } }
+  .list{ border:1px dashed #2a3040; border-radius:12px; padding:12px; background:#11151c; }
+  html[data-theme="light"] .list{ background:#fafbfe; border-color:#d7dbea; }
+  .list h4{ margin:0 0 8px 0; font-size:13px; text-transform:uppercase; letter-spacing:.4px; color:#9aa4b2; }
+
+  ul{ margin:0; padding:0 0 0 18px; }
+  li{ margin:6px 0; list-style:disc; }
+
+  .footer-note{ color:var(--muted); font-size:12px; text-align:center; margin:18px 0 6px; }
+
+  /* === Toast === */
+  .toast{
+    position:fixed; left:50%; transform:translateX(-50%) translateY(20px);
+    bottom:18px; background:var(--card); border:1px solid var(--line); color:var(--ink);
+    padding:10px 14px; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.25);
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+    z-index:60; font-weight:700;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* === NEW BADGE (overlay on video) — no animation === */
+  .badge-new-top{
+    position:absolute; top:10px; right:10px; z-index:2;
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900; letter-spacing:.3px;
+    background:linear-gradient(180deg,#e11d48 0%, #b91c1c 100%);
+    color:#fff; border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+    text-transform:uppercase; line-height:1;
+  }
+  .badge-star{ display:inline-block; line-height:1; font-size:12px; position:relative; top:-1px; }
+  html[data-theme="light"] .badge-new-top{ box-shadow:0 4px 14px rgba(0,0,0,.18); }
+</style>
+</head>
+<body>
+  <div class="container" id="app">
+    <div class="header">
+      <div class="brand">
+        <button id="logoToggle" class="logo-btn" type="button" aria-label="Toggle theme via logo" title="Toggle theme">
+          <img class="logo logo-dark" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" alt="GV Leads logo (dark theme)" />
+          <img class="logo logo-light" src="https://theleadlasso.com/agency/gvleads/GVLeads_Dark.png" alt="GV Leads logo (light theme)" />
+        </button>
+        <div><div class="sub">Available Product Options + Solutions </div></div>
+      </div>
+    </div>
+
+    <!-- Sticky controls bar -->
+    <div class="controls-wrap">
+      <div class="controls" role="search">
+        <div class="left-controls">
+          <input id="search" class="search" type="search" placeholder="Search by product name…" aria-label="Search videos by product name" />
+          <div class="chips-row" aria-label="Filter by tags">
+            <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+
+            <!-- NEW before Popular, red, star, no animation -->
+            <button class="chip chip-new" type="button" data-filter="__NEW__" aria-pressed="false">
+              <span class="chip-star" aria-hidden="true">★</span>New
+            </button>
+
+            <button class="chip" type="button" data-filter="Popular" aria-pressed="false">Popular</button>
+            <button class="chip" type="button" data-filter="Sales" aria-pressed="false">Sales</button>
+            <button class="chip" type="button" data-filter="Service" aria-pressed="false">Service</button>
+            <button class="chip" type="button" data-filter="Popup" aria-pressed="false">Pop Up</button>
+            <button class="chip" type="button" data-filter="CTA" aria-pressed="false">CTA</button>
+            <button class="chip" type="button" data-filter="Personalization" aria-pressed="false">Personalization</button>
+          </div>
+        </div>
+        <div class="right-controls">
+          <button id="modeBtn" class="mode-btn" type="button" aria-pressed="true" aria-label="Toggle tag match mode">
+            <span class="mode-text">Match: ALL</span>
+          </button>
+          <button id="resetBtn" class="reset-btn" type="button" aria-label="Reset filters to defaults">Reset Filters</button>
+          <button id="themeBtn" class="theme-btn" type="button" aria-pressed="false" aria-label="Toggle color theme">
+            <span class="icon" aria-hidden="true">🌙</span>
+            <span class="theme-text">Switch to Light</span>
+          </button>
+          <button id="shareBtn" class="share-btn" type="button" aria-label="Copy shareable link">Copy Share Link</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="grid" aria-live="polite"></div>
+    <p class="footer-note">GV Leads. All rights reserved.</p>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">Link copied!</div>
+
+<script>
+/* ====== Pretty URL mask: hide .html in address bar ===== */
+(function maskHtmlInUrl(){
+  try{
+    var p = window.location.pathname;
+    if (p.endsWith('/solutions/products.html')) {
+      var qs = window.location.search || '';
+      var hash = window.location.hash || '';
+      window.history.replaceState(null, document.title, '/solutions/products' + qs + hash);
+    }
+  }catch(e){}
+})();
+
+/* ====== DATA ====== */
+var NEW_IDS = ["p16","p15"]; /* adjust this list anytime */
+
+var VIDEOS = [
+   {id:"p16", name:"Vehicle Acquisition Sell Your Car", tags:["Sales","Service","Popular"], src:"https://player.mediadelivery.net/embed/519154/4a394f82-7c43-438f-9c83-cf4a582f04b8", idealFor:["Vehicle Acquisition","Sales + Service Targeting","High Engagement"], features:["OEM Graphics","URL Forwarding","Specific Page Targeting"]},    
+  {id:"p15", name:"Holiday Toys for Tots Drive", tags:["Sales","Service","Popular"], src:"https://player.mediadelivery.net/embed/519154/b266b4fb-4f91-4b15-bc29-f5effc601c4d", idealFor:["Engagement","Community Engagement","Sales/Service Offers"], features:["Animation","Specfici Page Targeting","Countdown/Expiration"]},     
+  {id:"p13", name:"Website Return Customer Personalization", tags:["Sales","Service","Personalization","Popular"], src:"https://player.mediadelivery.net/embed/519154/9bcc27f2-18c4-4c8a-aec7-33ff3d542bee", idealFor:["Wanting Personalization","Sales & Service Engagement","Complete Solution"], features:["Form Memory","Sales and Service Integration","Dealer/OEM Branding"]},
+  {id:"p14", name:"SRP Corner Discount Badging", tags:["Sales","Badge","Popular"], src:"https://player.mediadelivery.net/embed/519154/cf7f8e44-1e3c-4115-8c34-a2cfa6b198f3", idealFor:["Highlighting Dealer or OEM Discounts","Vehicle Specific Badging","Promoting New or Used"], features:["Dynamic Discounts","Brand or Event Colors","Desktop + Mobile Visibility"]},    
+  {id:"p1",  name:"Spin To Win", tags:["Popular","Sales","Service","Popup"], src:"https://player.mediadelivery.net/embed/519154/a1f60ebe-2f76-49df-b79f-4bc2c4e8f5e0", idealFor:["Wanting Gamification","Increasing Form Engagement","Control Discount Amount/Chance"], features:["Animation","OEM Fonts/Branding","SMS Opt-In"]},
+  {id:"p2",  name:"Scratch And Win", tags:["Sales","Service","Popup"], src:"https://player.mediadelivery.net/embed/519154/c482cf64-9cef-4453-b2a1-a0945319012d", idealFor:["Show Offer After Contact Info Provided","Increasing Form Engagement","Control Discount Amount/Chance"], features:["Highly Interactive & Mobile Friendly","Strong Dealer Branding","Pushing Test Drives"]},
+  {id:"p3",  name:"Claim OEM Offer w/ Model Select", tags:["Sales","Popup"], src:"https://player.mediadelivery.net/embed/519154/c72fdd0b-19fd-4a45-97a2-75c05d56e200", idealFor:["Promoting APR or Lease Offers","Wanting OEM Branding/Fonts","Pushing Specfic Model"], features:["Countdown/Expiration Date","Target Specific SRP/VDPs","Pushing Test Drives"]},
+  {id:"p4",  name:"Holiday Claim Discount Offer (Halloween)", tags:["Popular","Sales","Service","Popup"], src:"https://player.mediadelivery.net/embed/519154/4392ec6b-88be-49a7-b603-fb4915f70b71", idealFor:["Wanting Full Customization","Promoting Simple Offer","Location or Zip Code Targeting"], features:["IP/Address Restrictions","Year/Make/Model Targeting","Teaser Option Available"]},
+  {id:"p5",  name:"Service Road Trip Package Offer", tags:["Service","Popup"], src:"https://player.mediadelivery.net/embed/519154/90371ad1-169d-4c39-a2ae-f8f7114f106e", idealFor:["Service Incentives","Increasing Service Appointments","Targeting Conquest Customers"], features:["Zip Code or Radius Targeting","Push to Service Scheduler","Offer Expiration"]},
+  {id:"p6",  name:"Unlock Lower Price CTA", tags:["Sales","CTA"], src:"https://player.mediadelivery.net/embed/519154/153172e0-c714-4b7f-a4e2-6a3d3a874bd1", idealFor:["Advertising Below MAAP or MSRP","Increased Conversions","Wanting More Test Drives"], features:["Age of Unit Price Custimzation","Custom Branding or Colors","GA4 + ASC Tracking"]},
+  {id:"p7",  name:"Service Need Assistance", tags:["Service","Popup"], src:"https://player.mediadelivery.net/embed/519154/9f61d767-ea85-460a-a841-1fe5b4331ff1", idealFor:["Difficult Service Scheduling","Recall Appointments"], features:["BDC Department Integration","Mobile Friendly"]},
+  {id:"p8",  name:"Video Claim Offer", tags:["Sales","Popup"], src:"https://player.mediadelivery.net/embed/519154/68f3c0eb-9f20-4694-8631-bb68db32fd92", idealFor:["OEM or Dealer Video","Additional Enagement"], features:["VDP/SRP Targeting","Desktop/Mobile Friendly"]},
+  {id:"p9",  name:"Window Sticker", tags:["Sales","CTA"], src:"https://player.mediadelivery.net/embed/519154/62d283f6-7436-40a2-8821-80f6a1e86616", idealFor:["Additional Lead Conversions","High Traffic VDPs"], features:["Desktop/Mobile Friendly","Highly Converting Form"]},
+  {id:"p10", name:"Vehicle History Report", tags:["Sales","CTA"], src:"https://player.mediadelivery.net/embed/519154/17bdc389-4d28-467e-9010-ab3e6ffcf1e1", idealFor:["Additional Lead Conversions","High Traffic VDPs"], features:["Desktop/Mobile Friendly","Highly Converting Form"]},
+  {id:"p11", name:"Check Availability", tags:["Sales","Popup","CTA"], src:"https://player.mediadelivery.net/embed/519154/e88d1767-10f2-4061-aa73-10fdf4ad1f23", idealFor:["Not Wanting to Discount Vehicles","Customize Website Forms","Dealer/OEM Branding"], features:["Integrated Test Drive Step","Available for VDPs + SRPs","GA4 + ASC Events"]},
+  {id:"p12", name:"Countdown", tags:["Sales","Service","Popup"], src:"https://player.mediadelivery.net/embed/519154/7e41463b-4d59-4b65-b7fe-81ac7bbec427", idealFor:["Creating Urgency","APR, Discount or Lease Offers","Optional Vehicle Selection"], features:["Scheduled Countdown","Brand Colors/Fonts","Teaser Available"]}
+];
+
+var THEME_KEY = "kmc2_video_theme";
+
+/* ===== State ===== */
+var selectedTags = [];     // active tag filters
+var filterMode = "AND";    // "AND" or "OR"
+var currentTheme = "dark"; // tracked for URL + LS
+
+/* ===== Helpers ===== */
+function h(tag, attrs, children){
+  var el = document.createElement(tag);
+  attrs = attrs || {};
+  for (var k in attrs){ if (attrs.hasOwnProperty(k)) {
+    if (k === "class") el.className = attrs[k];
+    else if (k.indexOf("data-") === 0) el.setAttribute(k, attrs[k]);
+    else if (k.slice(0,5) === "aria-") el.setAttribute(k, attrs[k]);
+    else el[k] = attrs[k];
+  }}
+  if (children && children.length){
+    for (var i=0;i<children.length;i++){
+      var c = children[i];
+      if (typeof c === "string") el.appendChild(document.createTextNode(c));
+      else if (c) el.appendChild(c);
+    }
+  }
+  return el;
+}
+
+/* ===== Query/hash utils (ES5-safe) ===== */
+function parseQueryString(qs){
+  var out = {};
+  if (!qs) return out;
+  var s = qs.charAt(0) === "?" ? qs.substring(1) : (qs.charAt(0) === "#" ? qs.substring(1) : qs);
+  if (!s) return out;
+  var parts = s.split("&");
+  for (var i=0;i<parts.length;i++){
+    var kv = parts[i].split("=");
+    var k = decodeURIComponent(kv[0] || "");
+    var v = decodeURIComponent(kv[1] || "");
+    if (k) out[k] = v;
+  }
+  return out;
+}
+function buildQuery(obj){
+  var pairs = [];
+  for (var k in obj){ if (obj.hasOwnProperty(k) && obj[k] !== null && obj[k] !== "" && typeof obj[k] !== "undefined"){
+    pairs.push(encodeURIComponent(k) + "=" + encodeURIComponent(obj[k]));
+  }}
+  return pairs.length ? "?" + pairs.join("&") : "";
+}
+function getFilteredQueryString(){
+  var search = document.getElementById("search");
+  var q = search ? search.value : "";
+  return buildQuery({
+    tags: selectedTags.join(","),
+    mode: filterMode.toLowerCase(),
+    q: q,
+    theme: currentTheme
+  });
+}
+function setUrlState(){
+  var qs = getFilteredQueryString();
+  var newUrl = window.location.pathname + qs;
+  try{
+    if (window.history && window.history.replaceState){
+      window.history.replaceState(null, document.title, newUrl);
+    }else{
+      window.location.hash = qs.replace(/^\?/, "");
+    }
+  }catch(e){
+    try{ window.location.hash = qs.replace(/^\?/, ""); }catch(_){}
+  }
+  var origin = (window.location.origin || (window.location.protocol + "//" + window.location.host));
+  var full = origin + window.location.pathname + qs;
+  var shareBtn = document.getElementById("shareBtn");
+  if (shareBtn){ shareBtn.setAttribute("data-link", full); }
+}
+
+/* ===== UI builders ===== */
+function listBlock(title, items){
+  var ulItems = [];
+  if (items && items.length){
+    for (var i=0;i<items.length;i++){ ulItems.push(h("li",{},[items[i]])); }
+  }else{
+    ulItems.push(h("li",{},["No items"]));
+  }
+  return h("div",{class:"list"},[
+    h("h4",{},[title]),
+    h("ul",{}, ulItems)
+  ]);
+}
+
+/* ==== card() overlays "NEW" badge inside .thumb (no animation) ==== */
+function card(v){
+  var cardEl = h("article",{class:"card","data-name":v.name.toLowerCase(),"data-tags":(v.tags||[]).join(",")},[]);
+  var iframe = h("iframe",{
+    src:v.src, title:v.name + " video",
+    allow:"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+    referrerPolicy:"strict-origin-when-cross-origin",
+    loading:"lazy", allowFullscreen:true
+  });
+  var thumb = h("div",{class:"thumb"},[iframe]);
+
+  var isNew = NEW_IDS.indexOf(v.id) !== -1;
+  if (isNew){
+    thumb.appendChild(
+      h("span",{class:"badge-new-top","aria-label":"New item"},[
+        h("span",{class:"badge-star","aria-hidden":"true"},["★"]),
+        "NEW"
+      ])
+    );
+  }
+
+  var content = h("div",{class:"content"},[
+    h("h3",{class:"name"},[v.name]),
+    h("div",{class:"meta"}, (v.tags||[]).map(function(t){ return h("span",{class:"pill"},[t]); }))
+  ]);
+
+  var lists = h("div",{class:"lists"},[
+    listBlock("IDEAL FOR DEALERS:", v.idealFor),
+    listBlock("FEATURES:", v.features)
+  ]);
+
+  cardEl.appendChild(thumb);
+  cardEl.appendChild(content);
+  cardEl.appendChild(lists);
+  return cardEl;
+}
+
+function render(videos){
+  var grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  for (var i=0;i<videos.length;i++){ grid.appendChild(card(videos[i])); }
+}
+
+/* ===== Filtering ===== */
+function hasAllTags(itemTags, req){
+  for (var i=0;i<req.length;i++){ if (itemTags.indexOf(req[i]) === -1) return false; }
+  return true;
+}
+function hasAnyTag(itemTags, req){
+  for (var i=0;i<req.length;i++){ if (itemTags.indexOf(req[i]) !== -1) return true; }
+  return false;
+}
+function filterList(query){
+  var q = (query||"").toLowerCase();
+  var out = [];
+  for (var i=0;i<VIDEOS.length;i++){
+    var v = VIDEOS[i];
+
+    var vtags = (v.tags || []).slice(0);
+    if (NEW_IDS.indexOf(v.id) !== -1){ vtags.push("__NEW__"); }
+
+    var okName = !q || v.name.toLowerCase().indexOf(q) !== -1;
+    var okTags = true;
+    if (selectedTags.length){
+      okTags = (filterMode === "AND") ? hasAllTags(vtags, selectedTags) : hasAnyTag(vtags, selectedTags);
+    }
+    if (okName && okTags) out.push(v);
+  }
+  return out;
+}
+function applyFilters(){
+  var search = document.getElementById("search");
+  render(filterList(search ? search.value : ""));
+  setUrlState();
+}
+
+/* ===== Chips (multi-select) ===== */
+function setAllChipStates(){
+  var chips = document.querySelectorAll(".chip");
+  var anySelected = selectedTags.length > 0;
+  for (var i=0;i<chips.length;i++){
+    var tag = chips[i].getAttribute("data-filter");
+    if (tag === "all"){
+      chips[i].setAttribute("aria-pressed", anySelected ? "false" : "true");
+    }else{
+      chips[i].setAttribute("aria-pressed", selectedTags.indexOf(tag)!==-1 ? "true" : "false");
+    }
+  }
+}
+function onChipClick(e){
+  var tag = e.currentTarget.getAttribute("data-filter");
+  if (tag === "all"){
+    selectedTags = [];
+    setAllChipStates();
+    applyFilters();
+    return;
+  }
+  var idx = selectedTags.indexOf(tag);
+  if (idx === -1) selectedTags.push(tag);
+  else selectedTags.splice(idx,1);
+  setAllChipStates();
+  applyFilters();
+}
+
+/* ===== Mode toggle (AND/ANY) ===== */
+function updateModeBtn(){
+  var btn = document.getElementById("modeBtn");
+  if (!btn) return;
+  var isAnd = filterMode === "AND";
+  btn.setAttribute("aria-pressed", isAnd ? "true" : "false");
+  var txt = btn.querySelector(".mode-text");
+  if (txt) txt.textContent = isAnd ? "Match: ALL" : "Match: ANY";
+}
+function toggleMode(){
+  filterMode = (filterMode === "AND") ? "OR" : "AND";
+  updateModeBtn();
+  applyFilters();
+}
+
+/* ===== Theme (Mode B: URL + LocalStorage) ===== */
+function applyTheme(theme){
+  currentTheme = (theme === "light") ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", currentTheme);
+  var btn = document.getElementById("themeBtn");
+  var txt = btn ? btn.querySelector(".theme-text") : null;
+  var icon = btn ? btn.querySelector(".icon") : null;
+  if (btn){
+    var isLight = currentTheme === "light";
+    btn.setAttribute("aria-pressed", isLight ? "true" : "false");
+    if (txt){ txt.textContent = isLight ? "Switch to Dark" : "Switch to Light"; }
+    if (icon){ icon.textContent = isLight ? "☀️" : "🌙"; }
+  }
+}
+function detectInitialTheme(urlTheme){
+  if (urlTheme === "light" || urlTheme === "dark") return urlTheme;
+  try{ var saved = localStorage.getItem(THEME_KEY); if (saved==="light"||saved==="dark") return saved; }catch(e){}
+  try{ var prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches; return prefersLight ? "light" : "dark"; }catch(e){}
+  return "dark";
+}
+
+/* ===== Toast ===== */
+function showToast(msg){
+  var el = document.getElementById("toast");
+  if (!el) return;
+  el.textContent = msg || "Link copied!";
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function(){ el.classList.remove("show"); }, 1500);
+}
+
+/* ===== Init from URL or hash ===== */
+function initFromUrl(){
+  var q = parseQueryString(window.location.search);
+  if (!q.tags && !q.mode && !q.q && !q.theme && window.location.hash){
+    q = parseQueryString(window.location.hash);
+  }
+  var initialTheme = detectInitialTheme(q.theme);
+  applyTheme(initialTheme);
+  try{ localStorage.setItem(THEME_KEY, initialTheme); }catch(e){}
+
+  if (q.tags){
+    var list = q.tags.split(",");
+    selectedTags = [];
+    for (var i=0;i<list.length;i++){ if (list[i]) selectedTags.push(list[i]); }
+  }
+  if (q.mode){
+    var m = q.mode.toLowerCase();
+    if (m === "and" || m === "or") filterMode = m.toUpperCase();
+  }
+  var search = document.getElementById("search");
+  if (q.q && search){ search.value = q.q; }
+}
+
+/* ===== Boot ===== */
+document.addEventListener("DOMContentLoaded", function(){
+  initFromUrl();
+
+  function toggleThemeAndPersist(){
+    var next = (currentTheme === "light") ? "dark" : "light";
+    applyTheme(next);
+    try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+    setUrlState();
+  }
+  var themeBtn = document.getElementById("themeBtn");
+  if (themeBtn){ themeBtn.addEventListener("click", toggleThemeAndPersist); }
+  var logoToggle = document.getElementById("logoToggle");
+  if (logoToggle){
+    logoToggle.addEventListener("click", toggleThemeAndPersist);
+    logoToggle.addEventListener("keydown", function(ev){
+      if (ev.key === "Enter" || ev.key === " " || ev.keyCode === 13 || ev.keyCode === 32){
+        ev.preventDefault(); toggleThemeAndPersist();
+      }
+    });
+  }
+
+  var chips = document.querySelectorAll(".chip");
+  for (var i=0;i<chips.length;i++){ chips[i].addEventListener("click", onChipClick); }
+  var modeBtn = document.getElementById("modeBtn");
+  if (modeBtn){ modeBtn.addEventListener("click", toggleMode); }
+  updateModeBtn();
+  setAllChipStates();
+
+  /* Reset Filters */
+  var resetBtn = document.getElementById("resetBtn");
+  if (resetBtn){
+    resetBtn.addEventListener("click", function(){
+      var search = document.getElementById("search");
+      if (search) search.value = "";
+      selectedTags = [];
+      filterMode = "AND";
+      setAllChipStates();
+      updateModeBtn();
+      applyFilters();
+      showToast("Filters reset");
+    });
+  }
+
+  /* Search */
+  var search = document.getElementById("search");
+  if (search){ search.addEventListener("input", function(){ applyFilters(); }); }
+
+  /* Share button */
+  var shareBtn = document.getElementById("shareBtn");
+  if (shareBtn){
+    shareBtn.addEventListener("click", function(){
+      var qs = getFilteredQueryString();
+      var origin = (window.location.origin || (window.location.protocol + "//" + window.location.host));
+      var link = origin + window.location.pathname + qs;
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(link).then(function(){
+          showToast("Link copied!");
+        }, function(){
+          try{ prompt("Copy this link:", link); }catch(_){}
+        });
+      }else{
+        try{ prompt("Copy this link:", link); }catch(_){}
+      }
+    });
+  }
+
+  /* Initial render + sync URL (includes theme) */
+  render(filterList(search ? search.value : ""));
+  setUrlState();
+});
+</script>
+</body>
+</html>
